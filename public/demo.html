@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Announcement Hub (Demo)</title>
+  <style>
+    /* การตั้งค่า CSS พื้นฐาน */
+    :root {
+      --navy-950: #08152f; --navy-900: #0d2045; --blue-600: #2d78d4; --blue-100: #eaf3ff;
+      --gold-500: #eebc55; --gold-100: #fff7df; --ink: #10223f; --muted: #64748b;
+      --line: #dbe5f1; --surface-soft: #f6f9fd; --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Tahoma, "Leelawadee UI", sans-serif; background: var(--surface-soft); color: var(--ink); line-height: 1.6; }
+    .container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    
+    /* Header */
+    .site-header { background: rgba(8, 21, 47, .97); color: #fff; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 18px rgba(8, 21, 47, .15); }
+    .header-inner { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg, var(--gold-500), #f3d98e); color: var(--navy-950); font-weight: 800; }
+    .brand strong { display: block; font-size: .98rem; }
+    .brand small { color: #b9c6df; font-size: .72rem; }
+    
+    /* Hero Section */
+    .hero { min-height: 470px; display: grid; grid-template-columns: 1.18fr .82fr; align-items: center; gap: 70px; padding: 70px 0; }
+    .hero-copy h1 { margin: 13px 0 18px; font-size: clamp(2.4rem, 5vw, 4.8rem); line-height: 1.08; color: var(--navy-950); }
+    .hero-copy p { color: var(--muted); font-size: 1.1rem; margin: 0; }
+    .eyebrow { color: var(--blue-600); text-transform: uppercase; font-size: .68rem; font-weight: 800; }
+    .text-gradient { color: var(--blue-600); }
+    
+    .hero-panel { border-radius: 26px; background: linear-gradient(145deg, var(--navy-900), #1c4e89); padding: 26px; color: #fff; box-shadow: 0 20px 50px rgba(8,21,47,.1); transform: rotate(1.5deg); }
+    .hero-panel-top { display: flex; justify-content: space-between; color: #c6d5ef; font-size: .78rem; }
+    .live-badge { color: var(--gold-500); font-weight: 800; }
+    .hero-stat { padding: 50px 0 33px; }
+    .hero-stat strong { display: block; font-size: 4.3rem; line-height: 1; }
+    
+    /* Content Section */
+    .section { padding: 36px 0 88px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; }
+    .section-heading h2 { margin: 0; font-size: 2rem; color: var(--navy-950); }
+    .search-wrap { position: relative; width: min(340px, 100%); }
+    .search-wrap input { width: 100%; border: 1px solid var(--line); border-radius: 13px; padding: 12px 15px; }
+    
+    .filter-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 25px 0 28px; }
+    .filter-button { border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 999px; padding: 9px 15px; font-weight: 700; cursor: pointer; transition: .18s ease; }
+    .filter-button span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 5px; border-radius: 50%; background: var(--surface-soft); font-size: .72rem; }
+    .filter-button:hover, .filter-button.is-active { color: var(--navy-950); border-color: var(--blue-600); background: var(--blue-100); }
+    .filter-button.is-active span { background: var(--blue-600); color: #fff; }
+    
+    /* Cards */
+    .announcement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+    .announcement-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; min-height: 210px; display: flex; flex-direction: column; transition: transform .18s; }
+    .announcement-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,.05); }
+    .card-meta { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .category-pill { border-radius: 999px; padding: 5px 9px; background: var(--blue-100); color: var(--blue-600); font-size: .72rem; font-weight: 800; }
+    .new-badge { border-radius: 999px; padding: 5px 9px; background: var(--gold-100); color: #9a6a00; font-size: .7rem; font-weight: 800; }
+    .announcement-card h3 { margin: 0 0 9px; font-size: 1.05rem; color: var(--navy-950); }
+    .announcement-card p { color: var(--muted); margin: 0; font-size: .9rem; }
+    .card-date { color: #8a98aa; margin-top: auto; padding-top: 17px; font-size: .76rem; }
+    
+    .empty-state { text-align: center; padding: 40px; color: var(--muted); background: #fff; border-radius: 18px; border: 1px dashed var(--line); display: none; }
+    
+    @media (max-width: 900px) { .hero { grid-template-columns: 1fr; gap: 30px; padding-top: 48px; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-mark">FA</div>
+        <div>
+          <strong>Faculty Announcement Hub</strong>
+          <small>ศูนย์รวมประกาศคณะ (โหมดจำลอง)</small>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">ประกาศล่าสุด</span>
+        <h1>ติดตามข่าวสารและ<span class="text-gradient">ประกาศสำคัญ</span></h1>
+        <p>นี่คือหน้าเว็บเดโม่แบบเปิดดูได้ทันที ข้อมูลทั้งหมดถูกจำลองขึ้นมาโดยไม่ต้องใช้ฐานข้อมูล สามารถทดลองกดปุ่มค้นหาหรือกรองหมวดหมู่ด้านล่างได้เลยครับ</p>
+      </div>
+      <div class="hero-panel">
+        <div class="hero-panel-top"><span>ประกาศทั้งหมดในระบบ</span> <span class="live-badge">• LIVE</span></div>
+        <div class="hero-stat"><strong id="hero-count">0</strong></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>ประกาศทั้งหมด</h2>
+        <div class="search-wrap">
+          <input type="text" id="search-input" placeholder="ค้นหาประกาศ (เช่น สอบ, ทุน)...">
+        </div>
+      </div>
+      
+      <div class="filter-row">
+        <button class="filter-button is-active" data-category="all">ทั้งหมด <span id="count-all">0</span></button>
+        <button class="filter-button" data-category="academic">วิชาการ <span id="count-academic">0</span></button>
+        <button class="filter-button" data-category="scholarship">ทุนการศึกษา <span id="count-scholarship">0</span></button>
+        <button class="filter-button" data-category="activity">กิจกรรม <span id="count-activity">0</span></button>
+        <button class="filter-button" data-category="general">ทั่วไป <span id="count-general">0</span></button>
+      </div>
+
+      <div id="empty-state" class="empty-state">ไม่พบประกาศที่ค้นหา</div>
+      <div id="announcement-list" class="announcement-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    // ข้อมูลจำลอง (Mock Data) แทนการดึงจาก Database
+    const mockData = [
+      { id: 1, title: '[DEMO] แจ้งกำหนดการสอบปลายภาค', content: 'กำหนดการสอบปลายภาคจะเริ่มตั้งแต่วันที่ 1-15 พฤศจิกายน 2569 ขอให้นักศึกษาเตรียมตัวให้พร้อม และตรวจสอบตารางสอบของตนเอง', category: 'academic', created_at: new Date().toISOString() },
+      { id: 2, title: '[DEMO] ทุนการศึกษาภาคการศึกษานี้', content: 'เปิดรับสมัครนักศึกษาที่มีผลการเรียนดีเพื่อรับทุนการศึกษาประจำปี 2569 ยื่นเอกสารได้ที่ห้องวิชาการภายในสิ้นเดือนนี้', category: 'scholarship', created_at: new Date(Date.now() - 86400000 * 2).toISOString() },
+      { id: 3, title: '[DEMO] กิจกรรมปฐมนิเทศนักศึกษาใหม่', content: 'ขอเชิญนักศึกษาใหม่ทุกท่านเข้าร่วมกิจกรรมปฐมนิเทศ ในวันที่ 25 ตุลาคม นี้ ณ หอประชุมใหญ่คณะ', category: 'activity', created_at: new Date(Date.now() - 86400000 * 5).toISOString() },
+      { id: 4, title: '[DEMO] ประกาศรับสมัครประธานรุ่น', content: 'เปิดรับสมัครนักศึกษาชั้นปีที่ 3 เพื่อคัดเลือกเป็นประธานรุ่น รับใบสมัครได้ที่สโมสรนักศึกษา', category: 'general', created_at: new Date(Date.now() - 86400000 * 10).toISOString() }
+    ];
+
+    const CATEGORY_LABELS = { academic: 'วิชาการ', scholarship: 'ทุน', activity: 'กิจกรรม', general: 'ทั่วไป' };
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    function isNew(dateStr) {
+      return (Date.now() - new Date(dateStr).getTime()) <= 3 * 24 * 60 * 60 * 1000;
+    }
+
+    function formatDate(dateStr) {
+      return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' }).format(new Date(dateStr));
+    }
+
+    function renderCards() {
+      const list = document.getElementById('announcement-list');
+      const empty = document.getElementById('empty-state');
+      
+      const filtered = mockData.filter(item => {
+        const matchCat = currentCategory === 'all' || item.category === currentCategory;
+        const matchSearch = item.title.includes(searchQuery) || item.content.includes(searchQuery);
+        return matchCat && matchSearch;
+      });
+
+      document.getElementById('hero-count').textContent = mockData.length;
+      document.getElementById('count-all').textContent = mockData.length;
+      document.getElementById('count-academic').textContent = mockData.filter(i => i.category === 'academic').length;
+      document.getElementById('count-scholarship').textContent = mockData.filter(i => i.category === 'scholarship').length;
+      document.getElementById('count-activity').textContent = mockData.filter(i => i.category === 'activity').length;
+      document.getElementById('count-general').textContent = mockData.filter(i => i.category === 'general').length;
+
+      if(filtered.length === 0) {
+        list.style.display = 'none';
+        empty.style.display = 'block';
+      } else {
+        list.style.display = 'grid';
+        empty.style.display = 'none';
+        list.innerHTML = filtered.map(item => `
+          <div class="announcement-card">
+            <div class="card-meta">
+              <span class="category-pill">${CATEGORY_LABELS[item.category]}</span>
+              ${isNew(item.created_at) ? '<span class="new-badge">ใหม่</span>' : ''}
+            </div>
+            <h3>${item.title}</h3>
+            <p>${item.content}</p>
+            <div class="card-date">ประกาศเมื่อ ${formatDate(item.created_at)}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // จัดการปุ่ม Filter
+    document.querySelectorAll('.filter-button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.filter-button').forEach(b => b.classList.remove('is-active'));
+        e.currentTarget.classList.add('is-active');
+        currentCategory = e.currentTarget.dataset.category;
+        renderCards();
+      });
+    });
+
+    // จัดการช่องค้นหา
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderCards();
+    });
+
+    // แสดงผลครั้งแรก
+    renderCards();
+  </script>
+</body>
+</html>
