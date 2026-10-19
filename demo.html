@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Announcement Hub - Ultimate Demo</title>
+  
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+  <link rel="stylesheet" href="/css/demo.css">
+</head>
+<body>
+
+  <section class="auth-screen" id="authScreen" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <div class="brand-mark auth-brand-mark">FA</div>
+      <span class="auth-eyebrow">DPU SMART CAMPUS PORTAL</span>
+      <h1 id="authTitle">เลือกโหมดทดลอง</h1>
+      <p>เข้าสู่ระบบตัวอย่างเพื่อทดลองใช้งาน โดยไม่ต้องใช้อีเมลหรือบัญชีจริง</p>
+      <div class="auth-demo" id="demoLoginOptions" hidden>
+        <p>โหมดทดลองในเครื่อง — บทบาทอาจารย์เป็นตัวอย่างเท่านั้น</p>
+        <div class="auth-demo-buttons">
+          <button class="btn btn-accent" type="button" onclick="loginWithDemo('student')">ทดลองเป็นนักศึกษา</button>
+          <button class="btn btn-accent" type="button" onclick="loginWithDemo('teacher')">ทดลองเป็นอาจารย์</button>
+        </div>
+      </div>
+      <p class="auth-error" id="authError" role="alert" hidden></p>
+    </div>
+  </section>
+
+  <div id="appShell" inert>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-mark">FA</div>
+        <div>
+          <strong>Faculty Announcement Hub</strong>
+          <small style="display:block; color:#b9c6df; font-size:0.75rem;">Smart Campus Portal • มหาวิทยาลัยธุรกิจบัณฑิตย์</small>
+        </div>
+      </div>
+      
+      <div class="profile-section">
+        <div class="user-info">
+          <div class="avatar" id="user-avatar">👤</div>
+          <div class="user-details">
+            <strong id="user-name">กำลังโหลด...</strong>
+            <span class="role-badge role-student" id="user-role-badge">ผู้ใช้</span>
+          </div>
+        </div>
+        
+        <button class="btn-darkmode" onclick="toggleDarkMode()">🌙</button>
+        <button class="btn-darkmode" type="button" onclick="logout()">ออกจากระบบ</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero -->
+    <div class="hero">
+      <div>
+        <span style="color: var(--primary); font-weight: bold; font-size: 0.8rem;">SMART ANNOUNCEMENT SYSTEM</span>
+        <h1 id="welcome-text">ศูนย์กลางประกาศ <span class="text-gradient">สำหรับนักศึกษา</span></h1>
+      </div>
+      
+      <div class="action-group">
+        <button class="btn btn-accent" id="btn-bookmarks" onclick="toggleViewBookmarks()">⭐️ ที่บันทึกไว้</button>
+        <div id="admin-actions" style="display: none;">
+          <button class="btn btn-primary" onclick="openAdminModal()">➕ สร้างประกาศใหม่</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teacher Analytics Dashboard -->
+    <div class="analytics-bar" id="analytics-bar">
+      <div class="stat-card"><span>ประกาศทั้งหมดในระบบ</span><strong id="stat-total">0</strong></div>
+      <div class="stat-card" style="border-left-color: var(--success);"><span>นักศึกษากดรับทราบแล้ว (รวม)</span><strong id="stat-ack">0 ครั้ง</strong></div>
+      <div class="stat-card" style="border-left-color: var(--accent);"><span>ผู้ลงทะเบียนกิจกรรม</span><strong id="stat-reg">0 คน</strong></div>
+      <div class="stat-card" style="border-left-color: var(--teacher);"><span>คำถามจากนักศึกษา (Q&A)</span><strong id="stat-qa">0 รายการ</strong></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filter-row">
+        <button class="filter-btn active" data-cat="all">ทั้งหมด</button>
+        <button class="filter-btn" data-cat="academic">วิชาการ</button>
+        <button class="filter-btn" data-cat="scholarship">ทุนการศึกษา</button>
+        <button class="filter-btn" data-cat="activity">กิจกรรม</button>
+        <button class="filter-btn" data-cat="general">ทั่วไป</button>
+      </div>
+      <div class="controls">
+        <input type="text" id="searchInput" placeholder="🔍 ค้นหาประกาศ..." oninput="handleSearch()">
+        <select id="sortSelect" onchange="handleSort()">
+          <option value="newest">เรียง: ใหม่ล่าสุด</option>
+          <option value="oldest">เรียง: เก่าสุด</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Announcement Cards Grid -->
+    <div class="grid" id="announcement-grid"></div>
+  </main>
+
+  <!-- Modal 1: รายละเอียดประกาศ & กระดานถาม-ตอบ (Q&A) -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div id="detailContent"></div>
+      <div class="comment-list" id="commentSection"></div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <input type="text" id="commentInput" placeholder="พิมพ์คำถามหรือความคิดเห็นเกี่ยวกับประกาศนี้..." style="margin:0;">
+        <button class="btn btn-primary" onclick="addComment()">ส่งข้อความ</button>
+      </div>
+      <div style="text-align:right; margin-top:16px;">
+        <button class="btn btn-accent" onclick="closeModal('detailModal')">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: QR Code สำหรับเข้างานกิจกรรม -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="modal" style="max-width: 400px; text-align: center;">
+      <h3 style="margin-top:0; color:var(--primary);">🎟️ บัตรเข้างานอิเล็กทรอนิกส์</h3>
+      <p id="qrEventTitle" style="font-weight:bold; margin:4px 0;"></p>
+      <p style="font-size:0.82rem; color:var(--text-muted);">แสดง QR Code นี้ต่อเจ้าหน้าที่หน้างานเพื่อเช็คชื่อรับชั่วโมงกิจกรรม</p>
+      <div style="background:#fff; padding:18px; border-radius:14px; display:inline-block; border:2px solid var(--border-line); margin:10px 0;">
+        <!-- SVG QR Code จำลอง ทำงานได้แม้ไม่มีเน็ต -->
+        <svg width="160" height="160" viewBox="0 0 100 100">
+          <rect width="100" height="100" fill="#fff"/>
+          <rect x="10" y="10" width="25" height="25" fill="none" stroke="#08152f" stroke-width="6"/>
+          <rect x="17" y="17" width="11" height="11" fill="#08152f"/>
+          <rect x="65" y="10" width="25" height="25" fill="none" stroke="#08152f" stroke-width="6"/>
+          <rect x="72" y="17" width="11" height="11" fill="#08152f"/>
+          <rect x="10" y="65" width="25" height="25" fill="none" stroke="#08152f" stroke-width="6"/>
+          <rect x="17" y="72" width="11" height="11" fill="#08152f"/>
+          <rect x="44" y="12" width="12" height="6" fill="#08152f"/>
+          <rect x="44" y="24" width="6" height="18" fill="#08152f"/>
+          <rect x="12" y="44" width="18" height="6" fill="#08152f"/>
+          <rect x="38" y="44" width="24" height="12" fill="#2d78d4"/>
+          <rect x="68" y="44" width="18" height="6" fill="#08152f"/>
+          <rect x="44" y="64" width="12" height="24" fill="#08152f"/>
+          <rect x="64" y="64" width="12" height="12" fill="#08152f"/>
+          <rect x="80" y="72" width="10" height="18" fill="#08152f"/>
+        </svg>
+      </div>
+      <div style="font-size:0.8rem; background:var(--success-light); color:var(--success); padding:8px; border-radius:8px; font-weight:bold;">
+        ผู้ลงทะเบียน: ธนบดี หมื่นไกรทอง (รหัสนักศึกษา Verified)
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:15px;" onclick="closeModal('qrModal')">เสร็จสิ้น</button>
+    </div>
+  </div>
+
+  <!-- Modal 3: พรีวิวไฟล์เอกสารแนบ PDF -->
+  <div class="modal-overlay" id="pdfModal">
+    <div class="modal">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">📄 พรีวิวเอกสารแนบ (In-App Document Viewer)</h3>
+        <button class="btn btn-accent" onclick="closeModal('pdfModal')">ปิด</button>
+      </div>
+      <div style="background:var(--bg-color); border:1px solid var(--border-line); border-radius:12px; padding:20px;">
+        <h4 style="margin-top:0; color:var(--primary);" id="pdfDocTitle">ตารางกำหนดการ</h4>
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border-line); text-align:left;">
+              <th style="padding:8px;">ลำดับ / รายการ</th>
+              <th style="padding:8px;">วันและเวลา</th>
+              <th style="padding:8px;">สถานที่ / ช่องทาง</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border-line);">
+              <td style="padding:8px;">1. ยืนยันสิทธิ์และตรวจสอบรายชื่อ</td>
+              <td style="padding:8px;">1 - 5 พ.ย. 2569</td>
+              <td style="padding:8px;">ระบบออนไลน์ (REG DPU)</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border-line);">
+              <td style="padding:8px;">2. วันดำเนินการตามประกาศ</td>
+              <td style="padding:8px;">10 พ.ย. 2569 (09:00 - 12:00 น.)</td>
+              <td style="padding:8px;">อาคารเฉลิมพระเกียรติ ชั้น 5</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: สร้างประกาศใหม่สำหรับแอดมิน -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal">
+      <h2 style="margin-top: 0; color: var(--primary);">📝 สร้างประกาศใหม่</h2>
+      <label style="font-weight: bold; font-size: 0.85rem;">กลุ่มเป้าหมาย (Target):</label>
+      <select id="postTarget">
+        <option value="all">ทุกคน (นักศึกษา และ อาจารย์)</option>
+        <option value="student">เฉพาะนักศึกษา</option>
+        <option value="teacher">เฉพาะอาจารย์ / เจ้าหน้าที่</option>
+      </select>
+
+      <label style="font-weight: bold; font-size: 0.85rem;">หัวข้อประกาศ:</label>
+      <input type="text" id="postTitle" placeholder="ระบุหัวข้อประกาศ...">
+
+      <label style="font-weight: bold; font-size: 0.85rem;">สรุปใจความสำคัญด้วย AI (AI Summary):</label>
+      <input type="text" id="postAiSummary" placeholder="สรุปสั้นๆ 1 บรรทัด (หากเว้นว่าง ระบบจะสรุปให้อัตโนมัติ)">
+
+      <label style="font-weight: bold; font-size: 0.85rem;">หมวดหมู่:</label>
+      <select id="postCategory">
+        <option value="academic">วิชาการ (academic)</option>
+        <option value="scholarship">ทุนการศึกษา (scholarship)</option>
+        <option value="activity">กิจกรรม - เปิดรับลงทะเบียน QR (activity)</option>
+        <option value="general">ทั่วไป (general)</option>
+      </select>
+
+      <label style="font-weight: bold; font-size: 0.85rem;">รายละเอียด:</label>
+      <div id="editor"></div>
+
+      <div style="display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 15px; font-size: 0.85rem; font-weight: bold;">
+        <label style="color: var(--danger);"><input type="checkbox" id="isPinned"> 📌 ปักหมุดประกาศด่วน</label>
+        <label style="color: var(--success);"><input type="checkbox" id="hasAttachment" checked> 📎 แนบไฟล์ตาราง PDF</label>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn btn-accent" onclick="closeModal('adminModal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitAnnouncement()">เผยแพร่ประกาศ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Smart Q&A Chatbot -->
+  <button class="chatbot-toggle" onclick="toggleChat()" title="ผู้ช่วยค้นหาประกาศอัจฉริยะ">🤖</button>
+  <div class="chatbot-window" id="chatbotWindow">
+    <div class="chat-header">
+      <span>🤖 DPU Smart Assistant</span>
+      <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer;">✕</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-msg bot">สวัสดีครับ! อยากทราบเรื่องตารางสอบ ทุนการศึกษา หรือกิจกรรม กดปุ่มด้านล่างหรือพิมพ์ถามได้เลยครับ</div>
+    </div>
+    <div class="quick-prompts">
+      <button onclick="askBot('สอบวันไหน')">📅 สอบวันไหน?</button>
+      <button onclick="askBot('มีทุนอะไรบ้าง')">🎓 มีทุนอะไรบ้าง?</button>
+      <button onclick="askBot('กิจกรรมใหม่')">🎉 กิจกรรมคณะ</button>
+    </div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="พิมพ์คำถาม เช่น สอบ, ทุน..." onkeydown="if(event.key==='Enter') sendChat()">
+      <button onclick="sendChat()">ส่ง</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toastBox">แจ้งเตือน</div>
+  </div>
+
+  <script src="/js/demo.js" defer></script>
+</body>
+</html>

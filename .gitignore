@@ -1,0 +1,33 @@
+# Dependencies
+**/node_modules/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Local database files
+**/database/data/*
+!**/database/data/.gitkeep
+*.sqlite
+*.sqlite-*
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build output and caches
+**/dist/
+**/build/
+**/coverage/
+**/.cache/
+**/.turbo/
+*.tsbuildinfo
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
