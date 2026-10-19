@@ -127,11 +127,19 @@
     .auth-eyebrow { color: var(--primary); font-size: 0.74rem; font-weight: bold; letter-spacing: 0.08em; }
     .auth-card h1 { margin: 6px 0; }
     .auth-card > p { color: var(--text-muted); font-size: 0.9rem; }
-    .auth-button { width: 100%; justify-content: center; margin: 16px 0 4px; }
-    .auth-button span { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: white; color: #4285f4; font-weight: 800; }
-    .auth-card .auth-note { font-size: 0.76rem; }
-    .auth-demo { margin-top: 20px; border-top: 1px solid var(--border-line); padding-top: 10px; }
-    .auth-demo > p { color: var(--text-muted); font-size: 0.78rem; }
-    .auth-demo-buttons { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .auth-form { display: grid; gap: 14px; margin-top: 22px; text-align: left; }
+    .auth-field { display: grid; gap: 6px; color: var(--text-main); font-size: 0.85rem; font-weight: 600; }
+    .auth-field input { width: 100%; padding: 11px 12px; border: 1px solid var(--border-line); border-radius: 9px; background: var(--bg-color); color: var(--text-main); font: inherit; }
+    .auth-field input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+    .auth-submit { width: 100%; justify-content: center; margin-top: 4px; }
+    .auth-submit:disabled { cursor: wait; opacity: 0.7; }
+    .auth-switch { margin: 18px 0 0; color: var(--text-muted); font-size: 0.85rem; }
+    .auth-switch-button { padding: 0; border: 0; background: transparent; color: var(--primary); font: inherit; font-weight: 700; cursor: pointer; }
+    .auth-card .auth-note { margin-top: 14px; font-size: 0.76rem; }
     .auth-error { color: var(--danger) !important; font-weight: bold; }
-    .auth-screen[hidden], .auth-demo[hidden], .auth-error[hidden], .auth-button[hidden] { display: none; }
+    .auth-screen[hidden], .auth-field[hidden], .auth-error[hidden] { display: none; }
+
+    @media (max-height: 700px) {
+      .auth-screen { align-items: start; overflow-y: auto; }
+      .auth-card { margin: auto; }
+    }

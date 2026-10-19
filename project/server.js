@@ -1,19 +1,22 @@
 import './config.js';
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import express from 'express';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { db } from './database/db.js';
 
+const scrypt = promisify(scryptCallback);
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const appDirectory = path.resolve(currentDirectory, '..');
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 if (process.env.NODE_ENV === 'production') {
-  throw new Error('Demo-only sign-in must not be exposed in production.');
+  throw new Error('This local-only authentication server must not run in production.');
 }
 const sessionCookieName = 'dpu-session';
 const sessionLifetimeMs = 7 * 24 * 60 * 60 * 1000;
+const passwordHashLength = 64;
 const categories = new Set(['academic', 'scholarship', 'activity', 'general']);
 const targets = new Set(['all', 'student', 'teacher']);
 
@@ -55,6 +58,19 @@ function hashToken(token) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+async function hashPassword(password) {
+  const salt = randomBytes(16);
+  const derivedKey = await scrypt(password, salt, passwordHashLength);
+  return `${salt.toString('hex')}:${derivedKey.toString('hex')}`;
+}
+
+async function verifyPassword(password, encodedHash) {
+  const [saltHex, hashHex] = encodedHash.split(':');
+  if (!/^[a-f0-9]{32}$/.test(saltHex) || !/^[a-f0-9]{128}$/.test(hashHex)) return false;
+  const derivedKey = await scrypt(password, Buffer.from(saltHex, 'hex'), passwordHashLength);
+  return timingSafeEqual(derivedKey, Buffer.from(hashHex, 'hex'));
+}
+
 function safeEqual(left, right) {
   if (typeof left !== 'string' || typeof right !== 'string') return false;
   const leftBuffer = Buffer.from(left);
@@ -82,13 +98,13 @@ function getSession(request) {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   return db.prepare(`
     SELECT
-      users.id, users.name, users.picture, users.role,
+      users.id, users.email, users.name, users.picture, users.role,
       sessions.token_hash AS tokenHash, sessions.csrf_token AS csrfToken
     FROM sessions
     JOIN users ON users.id = sessions.user_id
     WHERE sessions.token_hash = ?
       AND sessions.expires_at > ?
-      AND users.id IN ('demo-student', 'demo-teacher')
+      AND users.password_hash IS NOT NULL
   `).get(hashToken(token), new Date().toISOString()) ?? null;
 }
 
@@ -131,21 +147,6 @@ function getOrigin(request) {
   } catch {
     return false;
   }
-}
-
-function createOrUpdateUser({ id, name, role }) {
-  const now = new Date().toISOString();
-  const demoEmail = `${id}@demo.invalid`;
-  db.prepare(`
-    INSERT INTO users (id, email, name, picture, role, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      email = excluded.email,
-      name = excluded.name,
-      picture = excluded.picture,
-      role = excluded.role,
-      updated_at = excluded.updated_at
-  `).run(id, demoEmail, name, null, role, now, now);
 }
 
 function getAnnouncement(id, userId = 'anonymous') {
@@ -196,10 +197,6 @@ function apiError(res, status, message) {
   return res.status(status).json({ error: message });
 }
 
-app.get('/api/auth/config', (_request, response) => {
-  response.json({ demoEnabled: true });
-});
-
 app.get('/api/auth/me', (request, response) => {
   const session = getSession(request);
   if (!session) return response.json({ authenticated: false });
@@ -215,21 +212,64 @@ app.get('/api/auth/me', (request, response) => {
   });
 });
 
-app.post('/api/auth/demo', (request, response) => {
+app.post('/api/auth/register', async (request, response) => {
   if (!getOrigin(request)) return apiError(response, 403, 'คำขอเข้าสู่ระบบไม่ถูกต้อง');
 
-  const role = request.body?.role;
-  if (!['student', 'teacher'].includes(role)) {
-    return apiError(response, 400, 'เลือกบทบาททดลองไม่ถูกต้อง');
+  const name = typeof request.body?.name === 'string' ? request.body.name.trim() : '';
+  const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : '';
+  const password = request.body?.password;
+  if (name.length < 2 || name.length > 80) {
+    return apiError(response, 400, 'กรุณากรอกชื่อ 2-80 ตัวอักษร');
   }
-  const id = `demo-${role}`;
-  createOrUpdateUser({
-    id,
-    name: role === 'teacher' ? 'อาจารย์ทดลอง (Demo)' : 'นักศึกษาทดลอง (Demo)',
-    role,
-  });
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return apiError(response, 400, 'กรุณากรอกอีเมลให้ถูกต้อง');
+  }
+  if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
+    return apiError(response, 400, 'รหัสผ่านต้องมีความยาว 8-128 ตัวอักษร');
+  }
+
+  const passwordHash = await hashPassword(password);
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  try {
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, name, picture, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, NULL, 'student', ?, ?)
+    `).run(id, email, passwordHash, name, now, now);
+  } catch (error) {
+    if (error.code === 'ERR_SQLITE_ERROR' && error.message === 'UNIQUE constraint failed: users.email') {
+      return apiError(response, 409, 'อีเมลนี้ลงทะเบียนแล้ว');
+    }
+    throw error;
+  }
+
   const csrfToken = createSession(response, id);
   response.status(201).json({ csrfToken });
+});
+
+app.post('/api/auth/login', async (request, response) => {
+  if (!getOrigin(request)) return apiError(response, 403, 'คำขอเข้าสู่ระบบไม่ถูกต้อง');
+
+  const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : '';
+  const password = request.body?.password;
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    || typeof password !== 'string' || password.length > 128) {
+    return apiError(response, 400, 'กรุณากรอกอีเมลและรหัสผ่านให้ถูกต้อง');
+  }
+
+  const user = db.prepare(`
+    SELECT id, password_hash AS passwordHash
+    FROM users
+    WHERE email = ?
+  `).get(email);
+  const fallbackHash = `${randomBytes(16).toString('hex')}:${randomBytes(64).toString('hex')}`;
+  const passwordMatches = await verifyPassword(password, user?.passwordHash ?? fallbackHash);
+  if (!user || !user.passwordHash || !passwordMatches) {
+    return apiError(response, 401, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+  }
+
+  const csrfToken = createSession(response, user.id);
+  response.json({ csrfToken });
 });
 
 app.post('/api/auth/logout', requireAuth, requireCsrf, (request, response) => {

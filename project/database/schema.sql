@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT,
   name TEXT NOT NULL,
   picture TEXT,
   role TEXT NOT NULL CHECK (role IN ('student', 'teacher')),

@@ -67,10 +67,10 @@ function sanitizeRichText(value) {
         ...options,
         headers,
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         if (response.status === 401) showLoginScreen();
-        throw new Error(result.error || 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ');
+        throw new Error(result.error || `เซิร์ฟเวอร์ตอบกลับผิดพลาด (${response.status})`);
       }
       return result;
     }
@@ -85,16 +85,58 @@ function sanitizeRichText(value) {
       errorBox.hidden = !message;
     }
 
-    async function loginWithDemo(role) {
+    let authMode = 'login';
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const registering = mode === 'register';
+      document.getElementById('authTitle').innerText = registering ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ';
+      document.getElementById('authDescription').innerText = registering
+        ? 'สร้างบัญชีใหม่เพื่อใช้งานระบบประกาศ'
+        : 'เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน';
+      document.getElementById('authNameField').hidden = !registering;
+      document.getElementById('authName').disabled = !registering;
+      document.getElementById('authName').required = registering;
+      document.getElementById('authConfirmField').hidden = !registering;
+      document.getElementById('authConfirmPassword').disabled = !registering;
+      document.getElementById('authConfirmPassword').required = registering;
+      document.getElementById('authPassword').autocomplete = registering ? 'new-password' : 'current-password';
+      document.getElementById('authSubmit').innerText = registering ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ';
+      document.getElementById('authSwitchPrompt').innerText = registering ? 'มีบัญชีแล้ว?' : 'ยังไม่มีบัญชี?';
+      document.getElementById('authSwitch').innerText = registering ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+      document.getElementById('authError').hidden = true;
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const registering = authMode === 'register';
+      const password = document.getElementById('authPassword').value;
+      const errorBox = document.getElementById('authError');
+      if (registering && password !== document.getElementById('authConfirmPassword').value) {
+        errorBox.textContent = 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน';
+        errorBox.hidden = false;
+        return;
+      }
+
+      const submitButton = document.getElementById('authSubmit');
+      submitButton.disabled = true;
+      submitButton.innerText = registering ? 'กำลังสมัครสมาชิก...' : 'กำลังเข้าสู่ระบบ...';
       try {
-        const result = await requestApi('/api/auth/demo', {
+        const result = await requestApi(registering ? '/api/auth/register' : '/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ role }),
+          body: JSON.stringify({
+            ...(registering ? { name: document.getElementById('authName').value } : {}),
+            email: document.getElementById('authEmail').value,
+            password,
+          }),
         });
         await initializeApplication(result.csrfToken);
       } catch (error) {
         console.error(error);
         showLoginScreen(error.message);
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerText = registering ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ';
       }
     }
 
@@ -126,9 +168,6 @@ function sanitizeRichText(value) {
     }
 
     async function initializeApplication(sessionCsrfToken = '') {
-      const config = await requestApi('/api/auth/config');
-      document.getElementById('demoLoginOptions').hidden = !config.demoEnabled;
-
       const session = await requestApi('/api/auth/me');
       if (!session.authenticated) {
         showLoginScreen();
@@ -141,6 +180,11 @@ function sanitizeRichText(value) {
       document.getElementById('authScreen').hidden = true;
       await loadAnnouncements();
     }
+
+    document.getElementById('authForm').addEventListener('submit', submitAuth);
+    document.getElementById('authSwitch').addEventListener('click', () => {
+      setAuthMode(authMode === 'login' ? 'register' : 'login');
+    });
 
     function applyAnnouncement(updated) {
       const previous = announcements.find((item) => item.id === updated.id);

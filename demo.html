@@ -16,16 +16,33 @@
     <div class="auth-card">
       <div class="brand-mark auth-brand-mark">FA</div>
       <span class="auth-eyebrow">DPU SMART CAMPUS PORTAL</span>
-      <h1 id="authTitle">เลือกโหมดทดลอง</h1>
-      <p>เข้าสู่ระบบตัวอย่างเพื่อทดลองใช้งาน โดยไม่ต้องใช้อีเมลหรือบัญชีจริง</p>
-      <div class="auth-demo" id="demoLoginOptions" hidden>
-        <p>โหมดทดลองในเครื่อง — บทบาทอาจารย์เป็นตัวอย่างเท่านั้น</p>
-        <div class="auth-demo-buttons">
-          <button class="btn btn-accent" type="button" onclick="loginWithDemo('student')">ทดลองเป็นนักศึกษา</button>
-          <button class="btn btn-accent" type="button" onclick="loginWithDemo('teacher')">ทดลองเป็นอาจารย์</button>
-        </div>
-      </div>
+      <h1 id="authTitle">เข้าสู่ระบบ</h1>
+      <p id="authDescription">เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน</p>
+      <form class="auth-form" id="authForm">
+        <label class="auth-field" id="authNameField" hidden>
+          <span>ชื่อที่ใช้แสดง</span>
+          <input id="authName" name="name" type="text" autocomplete="name" minlength="2" maxlength="80" disabled>
+        </label>
+        <label class="auth-field">
+          <span>อีเมล</span>
+          <input id="authEmail" name="email" type="email" autocomplete="email" maxlength="254" required>
+        </label>
+        <label class="auth-field">
+          <span>รหัสผ่าน</span>
+          <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required>
+        </label>
+        <label class="auth-field" id="authConfirmField" hidden>
+          <span>ยืนยันรหัสผ่าน</span>
+          <input id="authConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" disabled>
+        </label>
+        <button class="btn btn-primary auth-submit" id="authSubmit" type="submit">เข้าสู่ระบบ</button>
+      </form>
+      <p class="auth-switch">
+        <span id="authSwitchPrompt">ยังไม่มีบัญชี?</span>
+        <button class="auth-switch-button" id="authSwitch" type="button">สมัครสมาชิก</button>
+      </p>
       <p class="auth-error" id="authError" role="alert" hidden></p>
+      <p class="auth-note">บัญชีที่สมัครใหม่จะได้รับสิทธิ์นักศึกษา</p>
     </div>
   </section>
 
