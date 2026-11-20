@@ -418,6 +418,31 @@ body {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
 }
+.btn-gold:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+}
+
+.roster-checkin-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  background: var(--bg-color);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-line);
+  align-items: center;
+}
+.roster-checkin-bar input {
+  margin: 0;
+  flex: 1;
+  font-size: 0.86rem;
+}
 
 /* Teacher Analytics Dashboard */
 .analytics-bar {

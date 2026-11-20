@@ -61,6 +61,17 @@ class RealtimeService {
     if (!this.io) return;
     this.io.emit('comment:new', { announcementId, comment, updatedAnnouncement });
   }
+
+  public broadcastAttendeeCheckedIn(payload: {
+    announcementId: number;
+    userId: string;
+    checkedIn: boolean;
+    checkedInAt: string | null;
+    name: string;
+  }) {
+    if (!this.io) return;
+    this.io.emit('attendance:checkedin', payload);
+  }
 }
 
 export const realtimeService = new RealtimeService();

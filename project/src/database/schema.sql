@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   announcement_id INTEGER NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   registered_at TEXT NOT NULL,
+  checked_in INTEGER NOT NULL DEFAULT 0 CHECK (checked_in IN (0, 1)),
+  checked_in_at TEXT,
   PRIMARY KEY (announcement_id, user_id)
 );
 

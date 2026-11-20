@@ -92,6 +92,56 @@ async function requestApi(path, options = {}) {
   return result;
 }
 
+// Web Audio Chime Notification
+let soundEnabled = true;
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) audioCtx = new AudioContextClass();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function toggleSoundNotification() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('btn-sound-toggle');
+  if (btn) {
+    btn.innerText = soundEnabled ? '🔔' : '🔕';
+    btn.title = soundEnabled ? 'เปิดเสียงแจ้งเตือนประกาศด่วน' : 'ปิดเสียงแจ้งเตือนประกาศด่วน';
+  }
+  showToast(soundEnabled ? '🔔 เปิดเสียงแจ้งเตือนเรียบร้อยแล้ว' : '🔕 ปิดเสียงแจ้งเตือนแล้ว');
+}
+
+function playChime(isUrgent = false) {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const tones = isUrgent ? [659.25, 880] : [523.25, 659.25];
+    tones.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+      gain.gain.setValueAtTime(0, now + idx * 0.15);
+      gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.15 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.15 + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.15);
+      osc.stop(now + idx * 0.15 + 0.4);
+    });
+  } catch (err) {
+    console.warn('Audio chime warning:', err);
+  }
+}
+
 // Real-time WebSocket Setup
 let socket = null;
 function setupRealtime() {
@@ -117,6 +167,7 @@ function setupRealtime() {
       newPost.bookmarked = bookmarkedIds.has(String(newPost.id));
       announcements.unshift(newPost);
       renderCards();
+      playChime(Boolean(newPost.pinned));
       showToast(`🔔 ประกาศใหม่: ${newPost.title}`);
     }
   });
@@ -157,6 +208,24 @@ function setupRealtime() {
       if (seatsMax !== undefined) post.seatsMax = seatsMax;
       renderCards();
     }
+  });
+
+  // Real-time Event: Attendance Check-in
+  socket.on('attendance:checkedin', (data) => {
+    if (activeRosterId === data.announcementId && activeRosterUsers) {
+      const u = activeRosterUsers.find((user) => user.id === data.userId);
+      if (u) {
+        u.checkedIn = data.checkedIn;
+        u.checkedInAt = data.checkedInAt;
+        renderRosterTable();
+      }
+    }
+    const post = announcements.find((a) => a.id === data.announcementId);
+    if (post && data.seatsTaken !== undefined) {
+      post.seatsTaken = data.seatsTaken;
+      renderCards();
+    }
+    showToast('🎟️ มีการอัปเดตการเช็คชื่อเข้างานกิจกรรม');
   });
 
   // Real-time Event: New Comment Added
@@ -348,6 +417,7 @@ let currentFilter = 'all';
 let searchQuery = '';
 let sortOrder = 'newest';
 let showBookmarksOnly = false;
+let showMyEventsOnly = false;
 
 function updateAnalytics() {
   document.getElementById('stat-total').innerText = announcements.length;
@@ -370,7 +440,8 @@ function renderCards() {
       a.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.aiSummary.toLowerCase().includes(searchQuery.toLowerCase());
     const matchBook = showBookmarksOnly ? a.bookmarked : true;
-    return matchRole && matchCat && matchSearch && matchBook;
+    const matchMyEvents = showMyEventsOnly ? Boolean(a.registered && a.category === 'activity') : true;
+    return matchRole && matchCat && matchSearch && matchBook && matchMyEvents;
   });
 
   filtered.sort((a, b) => {

@@ -125,6 +125,7 @@
             </div>
           </div>
           
+          <button class="btn-header-action" id="btn-sound-toggle" onclick="toggleSoundNotification()" title="เปิด/ปิดเสียงแจ้งเตือนประกาศด่วน">🔔</button>
           <button class="btn-header-action" onclick="toggleDarkMode()" title="สลับโหมด กลางวัน/กลางคืน">🌙</button>
           <button class="btn-header-action" type="button" onclick="logout()">ออกจากระบบ</button>
         </div>
@@ -157,6 +158,7 @@
           
           <div class="hero-actions">
             <button class="btn btn-gold" id="btn-bookmarks" onclick="toggleViewBookmarks()">⭐️ ประกาศที่บันทึกไว้</button>
+            <button class="btn btn-accent" id="btn-my-events" onclick="toggleViewMyEvents()">🎟️ กิจกรรมของฉัน</button>
             <div id="admin-actions" style="display: none;">
               <button class="btn btn-primary" onclick="openAdminModal()">➕ สร้างประกาศใหม่</button>
             </div>
@@ -379,13 +381,19 @@
         </div>
         <p id="rosterEventTitle" style="font-weight:700; margin:4px 0 10px; color:var(--text-main); font-size:1.05rem;"></p>
         
+        <div class="roster-checkin-bar">
+          <input type="text" id="rosterCheckinInput" placeholder="พิมพ์หรือสแกนรหัสตั๋ว (เช่น TKT-1-2) หรืออีเมล / รหัสนักศึกษา..." onkeydown="if(event.key==='Enter') handleManualCheckin()">
+          <button class="btn btn-primary btn-sm" onclick="handleManualCheckin()">⚡ เช็คชื่อทันที</button>
+        </div>
+        
         <div id="rosterContent" style="max-height: 380px; overflow-y: auto;">
           <!-- Attendee table rendered via JS -->
         </div>
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:18px;">
-          <span id="rosterTotalCount" style="font-size:0.88rem; font-weight:700; color:var(--text-muted);">รวม 0 คน</span>
-          <div style="display:flex; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:18px; flex-wrap:wrap; gap:10px;">
+          <div id="rosterTotalCount" style="font-size:0.88rem; font-weight:700; color:var(--text-muted);">รวม 0 คน</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-gold btn-sm" onclick="exportRosterCsv()">📥 ส่งออก CSV (Excel)</button>
             <button class="btn btn-accent btn-sm" onclick="printRoster()">🖨️ พิมพ์ใบรายชื่อ</button>
             <button class="btn btn-primary btn-sm" onclick="closeModal('rosterModal')">ปิดหน้าต่าง</button>
           </div>

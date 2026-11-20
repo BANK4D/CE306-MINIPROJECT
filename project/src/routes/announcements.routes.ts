@@ -371,6 +371,71 @@ announcementsRouter.get('/:id/registrations', requireTeacher, (request: RequestW
   });
 });
 
+// POST check-in attendee by ticket code or user ID (Teacher only)
+announcementsRouter.post('/:id/checkin', requireTeacher, (request: RequestWithUser, response) => {
+  const announcementId = Number(request.params.id);
+  const { code, userId, checkedIn = true } = request.body ?? {};
+
+  if (!Number.isSafeInteger(announcementId) || announcementId < 1) {
+    return apiError(response, 400, 'รหัสประกาศไม่ถูกต้อง');
+  }
+
+  const targetIdentifier = typeof code === 'string' && code.trim() ? code.trim() : typeof userId === 'string' ? userId.trim() : '';
+  if (!targetIdentifier) {
+    return apiError(response, 400, 'กรุณาระบุรหัสตั๋วหรือรหัสนักศึกษา');
+  }
+
+  const { checkInAttendee } = require('../database/db.js');
+  const result = checkInAttendee(announcementId, targetIdentifier, Boolean(checkedIn));
+
+  if (!result.success) {
+    return apiError(response, 404, result.message);
+  }
+
+  if (result.attendee) {
+    realtimeService.broadcastAttendeeCheckedIn({
+      announcementId,
+      userId: result.attendee.userId,
+      name: result.attendee.name,
+      checkedIn: result.attendee.checkedIn,
+      checkedInAt: result.attendee.checkedInAt,
+    });
+  }
+
+  const updatedRoster = getRegisteredUsers(announcementId);
+  return response.json({
+    ok: true,
+    message: result.message,
+    attendee: result.attendee,
+    registeredUsers: updatedRoster,
+  });
+});
+
+// GET export registrations to CSV (Teacher only)
+announcementsRouter.get('/:id/export-csv', requireTeacher, (request: RequestWithUser, response) => {
+  const announcementId = Number(request.params.id);
+  if (!Number.isSafeInteger(announcementId) || announcementId < 1) {
+    return apiError(response, 400, 'รหัสประกาศไม่ถูกต้อง');
+  }
+
+  const announcement = db.prepare('SELECT title FROM announcements WHERE id = ?').get(announcementId) as any;
+  if (!announcement) return apiError(response, 404, 'ไม่พบประกาศ');
+
+  const registeredUsers = getRegisteredUsers(announcementId);
+
+  // UTF-8 BOM for Thai Excel compatibility
+  let csvContent = '\uFEFFลำดับ,ชื่อ-นามสกุล,อีเมล,วันเวลาที่ลงทะเบียน,สถานะเข้างาน,เวลาที่เช็คชื่อ\n';
+  registeredUsers.forEach((u, index) => {
+    const status = u.checkedIn ? 'เช็คชื่อเข้างานแล้ว' : 'ยังไม่เช็คชื่อ';
+    const checkinTime = u.checkedInAt ? new Date(u.checkedInAt).toLocaleString('th-TH') : '-';
+    csvContent += `"${index + 1}","${u.name.replace(/"/g, '""')}","${u.email}","${new Date(u.registeredAt).toLocaleString('th-TH')}","${status}","${checkinTime}"\n`;
+  });
+
+  response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  response.setHeader('Content-Disposition', `attachment; filename="dpu_activity_${announcementId}_roster.csv"`);
+  return response.send(csvContent);
+});
+
 // GET ticket verification details (for user's QR ticket)
 announcementsRouter.get('/:id/ticket', (request: RequestWithUser, response) => {
   const announcementId = Number(request.params.id);

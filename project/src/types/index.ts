@@ -47,6 +47,8 @@ export interface RegistrationRecord {
   registeredAt: string;
   name: string;
   email: string;
+  checkedIn: boolean;
+  checkedInAt: string | null;
 }
 
 export interface Session {
