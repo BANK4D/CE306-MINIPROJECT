@@ -47,7 +47,11 @@ app.get(['/', '/demo.html'], (_request, response) => {
 
 // Error handling middleware
 app.use((error: any, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
-  console.error('[Internal Error]:', error);
   if (response.headersSent) return;
+  if (error?.type === 'entity.too.large' || error?.status === 413) {
+    response.status(413).json({ error: 'ไฟล์มีขนาดใหญ่เกินกำหนด (สูงสุด 10 MB ต่อไฟล์)' });
+    return;
+  }
+  console.error('[Internal Error]:', error);
   response.status(500).json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง' });
 });

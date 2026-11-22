@@ -1,57 +1,26 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { config } from '../config/env.js';
 import { seedDatabase } from './seed.js';
-import type { Announcement, CommentItem, RegistrationRecord, User } from '../types/index.js';
+import type { Announcement, AttachmentItem, CommentItem, RegistrationRecord } from '../types/index.js';
 
-const directory = path.dirname(fileURLToPath(import.meta.url));
 mkdirSync(path.dirname(config.databasePath), { recursive: true });
 
 export const db = new DatabaseSync(config.databasePath);
 db.exec('PRAGMA foreign_keys = ON;');
+db.exec(readFileSync(path.join(config.projectRoot, 'src', 'database', 'schema.sql'), 'utf8'));
 
-// Apply schema
-let schemaSql = '';
-const candidatePaths = [
-  path.join(directory, 'schema.sql'),
-  path.resolve(directory, '..', '..', 'src', 'database', 'schema.sql'),
-  path.resolve(directory, '..', '..', 'database', 'schema.sql'),
-];
-
-for (const p of candidatePaths) {
-  try {
-    schemaSql = readFileSync(p, 'utf8');
-    break;
-  } catch {}
+// Migrations for databases created before these columns existed
+function addColumnIfMissing(table: string, column: string, definition: string) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some(({ name }) => name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
+addColumnIfMissing('users', 'password_hash', 'TEXT');
+addColumnIfMissing('registrations', 'checked_in', 'INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('registrations', 'checked_in_at', 'TEXT');
 
-if (!schemaSql) {
-  throw new Error('schema.sql file not found in candidates: ' + candidatePaths.join(', '));
-}
-
-db.exec(schemaSql);
-
-// Column migration check for users
-const userColumns = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
-if (!userColumns.some(({ name }) => name === 'password_hash')) {
-  db.exec('ALTER TABLE users ADD COLUMN password_hash TEXT');
-}
-
-// Column migration check for registrations (check-in feature)
-const regColumns = db.prepare('PRAGMA table_info(registrations)').all() as { name: string }[];
-if (!regColumns.some(({ name }) => name === 'checked_in')) {
-  db.exec('ALTER TABLE registrations ADD COLUMN checked_in INTEGER NOT NULL DEFAULT 0');
-}
-if (!regColumns.some(({ name }) => name === 'checked_in_at')) {
-  db.exec('ALTER TABLE registrations ADD COLUMN checked_in_at TEXT');
-}
-
-// Seed initial data asynchronously
-seedDatabase(db).catch((err) => {
-  console.error('Failed to seed database:', err);
-});
+seedDatabase(db).catch((err) => console.error('Failed to seed database:', err));
 
 export function getAnnouncementById(id: number, userId: string = 'anonymous'): Announcement | null {
   const row = db.prepare(`
@@ -80,6 +49,8 @@ export function getAnnouncementById(id: number, userId: string = 'anonymous'): A
     ORDER BY id ASC
   `).all(id) as any[];
 
+  const attachments = getAttachments(id);
+
   return {
     ...row,
     id: Number(row.id),
@@ -96,12 +67,35 @@ export function getAnnouncementById(id: number, userId: string = 'anonymous'): A
       announcementId: Number(c.announcementId),
       isTeacher: Boolean(c.isTeacher),
     })),
+    attachments,
   };
 }
 
-export function getAllAnnouncements(userId: string = 'anonymous'): Announcement[] {
+export function getAttachments(announcementId: number): AttachmentItem[] {
+  const rows = db.prepare(`
+    SELECT id, announcement_id AS announcementId, original_name AS name,
+           mime_type AS mimeType, size, created_at AS createdAt
+    FROM attachments
+    WHERE announcement_id = ?
+    ORDER BY id ASC
+  `).all(announcementId) as any[];
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    announcementId: Number(r.announcementId),
+    name: String(r.name),
+    mimeType: String(r.mimeType),
+    size: Number(r.size),
+    createdAt: String(r.createdAt),
+    url: `/api/announcements/${Number(r.announcementId)}/attachments/${Number(r.id)}`,
+  }));
+}
+
+export function getAllAnnouncements(userId: string = 'anonymous', role?: string): Announcement[] {
   const rows = db.prepare('SELECT id FROM announcements ORDER BY created_at DESC, id DESC').all() as { id: number }[];
-  return rows.map(({ id }) => getAnnouncementById(id, userId)).filter((a): a is Announcement => a !== null);
+  return rows
+    .map(({ id }) => getAnnouncementById(id, userId))
+    .filter((a): a is Announcement => a !== null && (role !== 'student' || a.target !== 'teacher'));
 }
 
 export function getRegisteredUsers(announcementId: number): RegistrationRecord[] {

@@ -16,7 +16,7 @@ aiRouter.post('/ask', (request: RequestWithUser, response) => {
   }
 
   const userId = request.user?.id ?? 'anonymous';
-  const announcements = getAllAnnouncements(userId);
+  const announcements = getAllAnnouncements(userId, request.user?.role);
   const qLower = query.toLowerCase();
 
   // Score matching announcements

@@ -1,36 +1,20 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-import { existsSync } from 'node:fs';
 
-function findProjectRoot(startDir: string): string {
-  let dir = startDir;
-  while (dir !== path.dirname(dir)) {
-    if (existsSync(path.join(dir, 'package.json')) && existsSync(path.join(dir, 'database'))) {
-      return dir;
-    }
-    dir = path.dirname(dir);
-  }
-  return path.resolve(startDir, '..');
-}
-
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = findProjectRoot(currentDir);
-const envPath = path.join(projectRoot, '.env');
-
-if (existsSync(envPath)) {
-  dotenv.config({ path: envPath });
-}
+// src/config (or dist/config) -> project root
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+dotenv.config({ path: path.join(projectRoot, '.env'), quiet: true });
 
 export const config = {
   port: Number(process.env.PORT ?? 3000),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  databasePath: process.env.DATABASE_PATH
-    ? path.resolve(process.env.DATABASE_PATH)
-    : path.join(projectRoot, 'database', 'data', 'announcements.sqlite'),
+  databasePath: path.resolve(projectRoot, process.env.DATABASE_PATH ?? 'database/data/announcements.sqlite'),
   sessionCookieName: 'dpu-session',
   sessionLifetimeMs: 7 * 24 * 60 * 60 * 1000,
   passwordHashLength: 64,
+  uploadsDirectory: path.resolve(projectRoot, process.env.UPLOADS_PATH ?? 'database/uploads'),
+  maxUploadBytes: 10 * 1024 * 1024,
+  maxAttachmentsPerPost: 10,
   appDirectory: path.resolve(projectRoot, '..'),
   projectRoot,
 };

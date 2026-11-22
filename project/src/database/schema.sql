@@ -63,3 +63,16 @@ CREATE INDEX IF NOT EXISTS idx_comments_announcement_id
   ON comments(announcement_id, id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at
   ON sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  announcement_id INTEGER NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+  original_name TEXT NOT NULL,
+  stored_name TEXT NOT NULL UNIQUE,
+  mime_type TEXT NOT NULL,
+  size INTEGER NOT NULL CHECK (size >= 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_announcement_id
+  ON attachments(announcement_id, id);

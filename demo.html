@@ -25,12 +25,6 @@
       <div>
         <span>🏛️ มหาวิทยาลัยธุรกิจบัณฑิตย์ • Dhurakij Pundit University (DPU)</span>
       </div>
-      <ul class="univ-links">
-        <li><a href="https://reg.dpu.ac.th" target="_blank" rel="noopener">🌐 REG DPU</a></li>
-        <li><a href="https://lib.dpu.ac.th" target="_blank" rel="noopener">📚 หอสมุดกลาง</a></li>
-        <li><a href="https://dpu.instructure.com" target="_blank" rel="noopener">💻 DPU Canvas</a></li>
-        <li><a href="mailto:cite@dpu.ac.th">📧 CITE ติดต่อคณะ</a></li>
-      </ul>
     </div>
   </div>
 
@@ -277,6 +271,7 @@
           <div style="background:#f8fafc; padding:16px; border-radius:10px; font-size:0.92rem; line-height:1.7; margin-bottom:18px; border:1px solid #e2e8f0;" id="pdfDocBody">
             รายละเอียดประกาศ...
           </div>
+          <div id="pdfAttachments"></div>
 
           <h5 style="margin:14px 0 8px; color:var(--primary); font-size:0.95rem;">📅 ตารางกำหนดการและสถานที่จัดกิจกรรม</h5>
           <div id="pdfScheduleTableContainer">
@@ -359,6 +354,16 @@
 
         <label style="font-weight: 700; font-size: 0.85rem;">เนื้อหาประกาศฉบับเต็ม:</label>
         <div id="editor"></div>
+
+        <label style="font-weight: 700; font-size: 0.85rem; display:block; margin-top:14px;">📎 ไฟล์แนบ (รูปภาพ / เอกสาร):</label>
+        <div class="upload-box">
+          <input type="file" id="attachmentInput" multiple
+            accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,image/*"
+            onchange="handleFileSelect(event)" hidden>
+          <button type="button" class="btn btn-accent btn-sm" onclick="document.getElementById('attachmentInput').click()">➕ เลือกไฟล์</button>
+          <span class="upload-hint">png, jpg, gif, webp, pdf, doc/docx, xls/xlsx, ppt/pptx, txt • ไม่เกิน 10 MB ต่อไฟล์ • สูงสุด 10 ไฟล์</span>
+        </div>
+        <ul class="attach-list" id="attachmentPicker"></ul>
 
         <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; font-size: 0.85rem; font-weight: 700;">
           <label style="color: var(--danger); cursor:pointer;"><input type="checkbox" id="isPinned"> 📌 ปักหมุดประกาศด่วน</label>

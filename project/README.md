@@ -71,3 +71,20 @@ npm run dev
 ```
 
 เปิดเว็บเบราว์เซอร์ที่ <http://localhost:3000>
+
+---
+
+## ⚙️ การตั้งค่า (Configuration)
+
+คัดลอก `.env.example` เป็น `.env` เพื่อกำหนดค่า (ไม่บังคับ):
+
+| ตัวแปร | ค่าเริ่มต้น | คำอธิบาย |
+| :--- | :--- | :--- |
+| `PORT` | `3000` | พอร์ตของเซิร์ฟเวอร์ |
+| `HOST` | `127.0.0.1` | ที่อยู่ที่เซิร์ฟเวอร์ผูก (bind) |
+| `DATABASE_PATH` | `database/data/announcements.sqlite` | ตำแหน่งไฟล์ฐานข้อมูล (ฐานข้อมูลและข้อมูลตัวอย่างถูกสร้างอัตโนมัติเมื่อรันครั้งแรก) |
+| `UPLOADS_PATH` | `database/uploads` | โฟลเดอร์เก็บไฟล์แนบ |
+
+## 🧱 โครงสร้าง `src/`
+
+`server.ts` (entry) → `app.ts` (Express) → `routes/` (auth, announcements, ai) → `database/db.ts` (SQLite) · `middlewares/` (auth/CSRF) · `services/realtime.service.ts` (Socket.io)

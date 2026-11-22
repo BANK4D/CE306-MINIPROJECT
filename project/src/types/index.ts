@@ -2,17 +2,6 @@ export type Role = 'student' | 'teacher';
 export type Category = 'academic' | 'scholarship' | 'activity' | 'general';
 export type Target = 'all' | 'student' | 'teacher';
 
-export interface User {
-  id: string;
-  email: string;
-  passwordHash?: string;
-  name: string;
-  picture: string | null;
-  role: Role;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface CommentItem {
   id: number;
   announcementId: number;
@@ -20,6 +9,16 @@ export interface CommentItem {
   text: string;
   isTeacher: boolean;
   createdAt: string;
+}
+
+export interface AttachmentItem {
+  id: number;
+  announcementId: number;
+  name: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  url: string;
 }
 
 export interface Announcement {
@@ -39,6 +38,7 @@ export interface Announcement {
   acknowledged: boolean;
   registered: boolean;
   comments: CommentItem[];
+  attachments: AttachmentItem[];
 }
 
 export interface RegistrationRecord {
@@ -49,14 +49,6 @@ export interface RegistrationRecord {
   email: string;
   checkedIn: boolean;
   checkedInAt: string | null;
-}
-
-export interface Session {
-  tokenHash: string;
-  userId: string;
-  csrfToken: string;
-  expiresAt: string;
-  createdAt: string;
 }
 
 export interface AuthenticatedUser {

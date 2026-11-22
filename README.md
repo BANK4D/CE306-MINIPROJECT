@@ -112,73 +112,38 @@
 
 ---
 
-## 💡 บทวิเคราะห์และข้อเสนอแนะเพื่อยกระดับโครงงาน (Project Review & Enhancement Ideas)
-
-จากการตรวจสอบโครงสร้างและโค้ดทั้งหมดของโปรเจกต์ในปัจจุบัน ขอเสนอแนะแนวคิดเพื่อเพิ่มความสมบูรณ์แบบและการตัดทอนส่วนเกิน ดังนี้:
-
-### 🚀 สิ่งที่ควรพิจารณาเพิ่มเติม (Recommended Additions for A+ Grade):
-
-1. **ระบบเช็คชื่อหน้างานด้วย QR Code (Ticket Check-in Scanner for Teachers):**
-   * *ปัจจุบัน:* นักศึกษามี QR Code และอาจารย์ดูรายชื่อได้ แต่ยังไม่มีจุดกดยืนยันว่านักศึกษามาถึงงานจริง
-   * *สิ่งที่ควรเพิ่ม:* ในหน้าต่างรายชื่อผู้ลงทะเบียน (Roster Modal) ของอาจารย์ ให้เพิ่มช่องกรอกหรือสแกนรหัสตั๋ว เช่น `DPU-ACT-2-STUDENT` แล้วกดยืนยัน เพื่อเปลี่ยนสถานะเป็น `"✅ เข้างานแล้ว (Checked-in)"` แบบ Real-time จะทำให้ระบบกิจกรรมสมบูรณ์แบบ 100%
-2. **ปุ่มดาวน์โหลดรายชื่อเป็นไฟล์ Excel / CSV:**
-   * เพิ่มปุ่ม **"Export CSV"** ในหน้าต่างดูรายชื่อผู้ลงทะเบียน เพื่อให้อาจารย์สามารถดาวน์โหลดรายชื่อนักศึกษาไปใช้บันทึกชั่วโมงกิจกรรมหรือทำรายงานส่งคณะได้ทันที
-3. **แท็บ "กิจกรรมที่ฉันลงทะเบียน" (My Registered Activities):**
-   * เพิ่มปุ่มตัวกรองพิเศษให้นักศึกษาเรียกดูเฉพาะกิจกรรมที่ตนเองลงทะเบียนไว้ เพื่อเปิดบัตร QR Code ได้รวดเร็วโดยไม่ต้องเลื่อนหาประกาศเก่า
-4. **ระบบเสียงเตือนประกาศด่วน (Audio Chime Notification):**
-   * เพิ่มเสียงแจ้งเตือนสั้นๆ สไตล์นุ่มนวล เมื่อมีประกาศปักหมุดด่วน (`isPinned: true`) เข้ามาผ่าน WebSocket
-
-### ✂️ สิ่งที่ควรตัดทอนหรือล้างออก (Things to Trim / Remove):
-
-1. **ลบไฟล์คอนฟิก Prisma เก่าที่ตกค้าง:**
-   * ในโฟลเดอร์ `project/` ยังมีไฟล์ `prisma.config.ts` และโฟลเดอร์ `prisma/schema.prisma` ที่มีคอนฟิก PostgreSQL เก่าอยู่ ซึ่งไม่ได้ใช้งานแล้ว (ระบบปัจจุบันใช้ SQLite ผ่าน `src/database/db.ts`)
-   * *คำแนะนำ:* ลบโฟลเดอร์ `project/prisma` และ `project/prisma.config.ts` ออก เพื่อป้องกันไม่ให้อาจารย์ผู้ตรวจสับสนว่าต้องเปิด PostgreSQL หรือไม่
-2. **ลบไฟล์ `project/config.js` เก่า:**
-   * เนื่องจากระบบเปลี่ยนไปใช้ TypeScript และมี `project/src/config/env.ts` ทำหน้าที่แทนแล้ว ไฟล์ JavaScript เก่านี้จึงไม่จำเป็นอีกต่อไป
-3. **ตัดคำว่า "AI" ออกจากจุดที่ไม่จำเป็น:**
-   * ปรับเปลี่ยนข้อความปุ่มและกล่องข้อความจาก "AI สรุป" เป็น **"ประเด็นสำคัญประจำประกาศ"** และเปลี่ยน "บอท AI" เป็น **"ผู้ช่วยนักศึกษา CITE Concierge"** จะช่วยให้ระบบดูมีความเป็นทางการและน่าเชื่อถือในบริบทของมหาวิทยาลัยมากขึ้น
-
----
-
 ## 📁 โครงสร้างโปรเจกต์ (Project Directory Structure)
 
 ```text
 CE306-MINIPROJECT/
-├── demo.html               # หน้าเว็บหลัก Single Page Application (SPA) ธีม CITE DPU
-├── css/
-│   └── demo.css            # สไตล์ชีตหลัก, Responsive Design, Print Styles & Dark Mode
-├── js/
-│   └── demo.js             # Client Script, Socket.io Real-time Client, Dynamic QR Engine
+├── demo.html                 # หน้าเว็บหลัก (SPA) ธีม CITE DPU
+├── css/demo.css              # สไตล์ชีต, Responsive, Print, Dark Mode
+├── js/demo.js                # Client script, Socket.io client, QR E-Ticket generator
 ├── project/
-│   ├── src/                # ซอร์สโค้ดฝั่ง Backend (TypeScript)
-│   │   ├── app.ts          # Express Application, Middleware & Route Configuration
-│   │   ├── server.ts       # Server Entry Point (HTTP + Socket.io Server)
-│   │   ├── config/
-│   │   │   └── env.ts      # จัดการ Environment Variables และพาธของระบบ
+│   ├── src/
+│   │   ├── server.ts         # Entry point (HTTP + Socket.io)
+│   │   ├── app.ts            # Express app, middleware, static files
+│   │   ├── config/env.ts     # Environment variables และพาธของระบบ
 │   │   ├── database/
-│   │   │   ├── db.ts       # เชื่อมต่อ SQLite Database (`node:sqlite`)
-│   │   │   ├── schema.sql  # Database Schema (ตารางและ Constraints ทั้งหมด)
-│   │   │   └── seed.ts     # ข้อมูลเริ่มต้น (4 ประกาศหลัก + บัญชีตัวอย่าง)
-│   │   ├── middlewares/
-│   │   │   └── auth.middleware.ts  # ระบบสิทธิ์, Session Cookies, Scrypt Hash, CSRF
+│   │   │   ├── db.ts         # SQLite (`node:sqlite`) + query helpers + migration
+│   │   │   ├── schema.sql    # Database schema
+│   │   │   └── seed.ts       # ข้อมูลเริ่มต้น (4 ประกาศ + บัญชีตัวอย่าง)
+│   │   ├── middlewares/auth.middleware.ts   # Session, Scrypt, CSRF, role guard
 │   │   ├── routes/
-│   │   │   ├── ai.routes.ts            # API ผู้ช่วยอัจฉริยะ Smart Assistant
-│   │   │   ├── announcements.routes.ts # API จัดการประกาศ, ลงทะเบียน, รับทราบ, Q&A
-│   │   │   └── auth.routes.ts          # API เข้าสู่ระบบ, สมัครสมาชิก, Demo Login
-│   │   ├── services/
-│   │   │   └── realtime.service.ts     # ตัวกระจายข้อมูล WebSocket Broadcast
-│   │   └── types/
-│   │       └── index.ts    # TypeScript Interface และ Type Definitions
-│   ├── database/
-│   │   └── data/
-│   │       └── announcements.sqlite    # ไฟล์ฐานข้อมูล SQLite จริง (เก็บข้อมูลถาวร)
-│   ├── dist/               # โค้ดที่คอมไพล์จาก TypeScript เรียบร้อยแล้ว
-│   ├── package.json        # Dependencies และคำสั่ง Scripts
-│   ├── server.js           # Entry Point สำหรับความเข้ากันได้ย้อนหลัง
-│   ├── tsconfig.json       # การตั้งค่า TypeScript Compiler (Strict Mode)
-│   └── README.md           # เอกสารประกอบของโฟลเดอร์ Backend
-└── README.md               # เอกสารภาพรวมของโครงการ (หน้านี้)
+│   │   │   ├── auth.routes.ts           # สมัคร / เข้าสู่ระบบ / Demo login
+│   │   │   ├── announcements.routes.ts  # ประกาศ, ลงทะเบียน, Q&A, เช็คชื่อ, CSV, ไฟล์แนบ
+│   │   │   └── ai.routes.ts             # ผู้ช่วยค้นหาประกาศ
+│   │   ├── services/realtime.service.ts # Socket.io broadcast
+│   │   └── types/index.ts               # TypeScript types
+│   ├── database/data/        # ไฟล์ SQLite ถูกสร้างอัตโนมัติที่นี่ (ไม่ถูก commit)
+│   ├── .env.example          # ตัวอย่างค่า PORT / DATABASE_PATH
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── README.md             # เอกสารฝั่ง Backend
+└── README.md                 # เอกสารภาพรวม (หน้านี้)
 ```
+
+> ไฟล์ไหนที่ถูกลบในรอบทำความสะอาด: `project/server.js`, `project/database/{db.js,schema.sql,seed.js}` (โค้ด JavaScript รุ่นเก่าที่ซ้ำกับ `src/` และไม่ได้ถูกเรียกใช้), dependency `zod` และสคริปต์ `db:init` ที่ไม่ได้ใช้
 
 ---
 
@@ -190,27 +155,27 @@ CE306-MINIPROJECT/
 
 ### ขั้นตอนการรันระบบ
 1. เปิด Terminal / PowerShell แล้วเข้าไปที่โฟลเดอร์ `project`:
-   ```powershell
-   cd "c:\Users\kuy bank\Documents\GitHub\CE306-MINIPROJECT\project"
+   ```bash
+   cd project
    ```
 
 2. ติดตั้งแพ็กเกจที่จำเป็น (หากยังไม่ได้ติดตั้ง):
-   ```powershell
+   ```bash
    npm install
    ```
 
 3. ตรวจสอบความถูกต้องของ Types (TypeScript Typecheck):
-   ```powershell
+   ```bash
    npm run typecheck
    ```
 
 4. เริ่มต้นเซิร์ฟเวอร์:
    * **โหมด Production / มาตรฐาน:**
-     ```powershell
+     ```bash
      npm start
      ```
    * **โหมด Development (รีสตาร์ทอัตโนมัติเมื่อแก้โค้ด):**
-     ```powershell
+     ```bash
      npm run dev
      ```
 
@@ -244,6 +209,11 @@ CE306-MINIPROJECT/
 | `PUT` | `/api/announcements/:id/acknowledgement` | ล็อกอินแล้ว | บันทึกหรือยกเลิกการรับทราบประกาศ (Broadcast เรียลไทม์) |
 | `POST` | `/api/announcements/:id/registration` | ล็อกอินแล้ว | ลงทะเบียนเข้าร่วมกิจกรรม (Broadcast เรียลไทม์) |
 | `GET` | `/api/announcements/:id/registrations` | อาจารย์ | ดูรายชื่อนักศึกษาที่ลงทะเบียนกิจกรรม |
+| `POST` | `/api/announcements/:id/checkin` | อาจารย์ | เช็คชื่อ/ยกเลิกเช็คชื่อผู้เข้างานด้วยรหัสตั๋วหรือ user id |
+| `GET` | `/api/announcements/:id/export-csv` | อาจารย์ | ดาวน์โหลดรายชื่อผู้ลงทะเบียนเป็น CSV |
+| `POST` | `/api/announcements/:id/attachments` | อาจารย์ | อัปโหลดไฟล์แนบ (สูงสุด 10 ไฟล์ / 10 MB ต่อไฟล์) |
+| `GET` | `/api/announcements/:id/attachments/:attachmentId` | ล็อกอินแล้ว | เปิด/ดาวน์โหลดไฟล์แนบ |
+| `DELETE` | `/api/announcements/:id/attachments/:attachmentId` | อาจารย์ | ลบไฟล์แนบ |
 | `GET` | `/api/announcements/:id/ticket` | ล็อกอินแล้ว | ดึงข้อมูลบัตรเข้างาน E-Ticket สำหรับสร้าง QR Code |
 | `POST` | `/api/announcements/:id/comments` | ล็อกอินแล้ว | ส่งข้อความถาม-ตอบบนประกาศ (Broadcast เรียลไทม์) |
 
@@ -264,6 +234,7 @@ CE306-MINIPROJECT/
 | `announcement:deleted` | Server ➔ Client | `{ id }` | ลบการ์ดประกาศออกจากหน้าจอทันที |
 | `announcement:ack` | Server ➔ Client | `{ announcementId, ackCount }` | อัปเดตตัวเลขยอดรับทราบของการ์ดนั้นสด |
 | `announcement:registered`| Server ➔ Client | `{ announcementId, seatsTaken, seatsMax }` | อัปเดตที่นั่งที่ถูกจองสดทันที |
+| `attendance:checkedin` | Server ➔ Client | `{ announcementId, userId, name, checkedIn, checkedInAt }` | อัปเดตสถานะเช็คชื่อในรายชื่อสด |
 | `comment:new` | Server ➔ Client | `{ announcementId, comment }` | ดันข้อความความคิดเห็นใหม่เข้า Modal Q&A ทันที |
 
 ---

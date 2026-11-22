@@ -561,9 +561,9 @@ function renderCards() {
             }
 
             ${
-              item.hasPdf
+              item.hasPdf || (item.attachments && item.attachments.length > 0)
                 ? `
-              <button class="chip-btn" onclick="openPdfModalFor(${item.id})">📄 ดูเอกสารแนบ</button>
+              <button class="chip-btn" onclick="openPdfModalFor(${item.id})">📄 ดูเอกสารแนบ${item.attachments && item.attachments.length ? ` (${item.attachments.length})` : ''}</button>
             `
                 : ''
             }
@@ -744,6 +744,7 @@ function openPdfModalFor(id) {
     year: 'numeric',
   })}`;
   document.getElementById('pdfDocBody').innerHTML = sanitizeRichText(post.content);
+  document.getElementById('pdfAttachments').innerHTML = renderAttachmentsHtml(post, '📎 ไฟล์แนบจากอาจารย์');
 
   document.getElementById('pdfModal').style.display = 'grid';
 }
@@ -773,6 +774,7 @@ function openDetailModal(id) {
     <h2 style="margin:4px 0 10px;">${escapeHtml(post.title)}</h2>
     <div class="ai-box"><strong>✨ AI สรุปประเด็นสำคัญ:</strong> ${escapeHtml(post.aiSummary)}</div>
     <div style="margin:14px 0; line-height:1.7;">${sanitizeRichText(post.content)}</div>
+    ${renderAttachmentsHtml(post)}
   `;
   renderComments(post);
   document.getElementById('detailModal').style.display = 'grid';
@@ -825,6 +827,158 @@ async function addComment() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Attachments (images & documents)
+// ---------------------------------------------------------------------------
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENTS = 10;
+const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'];
+let pendingFiles = [];
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileIcon(name, mimeType = '') {
+  const ext = name.split('.').pop().toLowerCase();
+  if (mimeType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) return '🖼️';
+  if (ext === 'pdf') return '📕';
+  if (['doc', 'docx'].includes(ext)) return '📘';
+  if (['xls', 'xlsx'].includes(ext)) return '📗';
+  if (['ppt', 'pptx'].includes(ext)) return '📙';
+  return '📄';
+}
+
+function currentEditingAttachments() {
+  if (!editingPostId) return [];
+  return announcements.find((a) => a.id === editingPostId)?.attachments ?? [];
+}
+
+function renderAttachmentPicker() {
+  const list = document.getElementById('attachmentPicker');
+  if (!list) return;
+  const existing = currentEditingAttachments();
+
+  const existingHtml = existing
+    .map(
+      (f) => `
+      <li class="attach-item">
+        <span>${fileIcon(f.name, f.mimeType)}</span>
+        <a class="attach-name" href="${f.url}" target="_blank" rel="noopener">${escapeHtml(f.name)}</a>
+        <span class="attach-size">${formatFileSize(f.size)}</span>
+        <button type="button" class="attach-remove" title="ลบไฟล์นี้" onclick="removeExistingAttachment(${f.id})">✕</button>
+      </li>`
+    )
+    .join('');
+
+  const pendingHtml = pendingFiles
+    .map(
+      (f, index) => `
+      <li class="attach-item">
+        <span>${fileIcon(f.name, f.type)}</span>
+        <span class="attach-name">${escapeHtml(f.name)}</span>
+        <span class="attach-tag">รออัปโหลด</span>
+        <span class="attach-size">${formatFileSize(f.size)}</span>
+        <button type="button" class="attach-remove" title="เอาออก" onclick="removePendingFile(${index})">✕</button>
+      </li>`
+    )
+    .join('');
+
+  list.innerHTML = existingHtml + pendingHtml;
+}
+
+function handleFileSelect(event) {
+  const input = event.target;
+  const files = [...input.files];
+  input.value = '';
+
+  for (const file of files) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      showToast(`❌ ไม่รองรับไฟล์ ${file.name}`);
+      continue;
+    }
+    if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
+      showToast(`❌ ${file.name} ต้องมีขนาดไม่เกิน 10 MB`);
+      continue;
+    }
+    if (currentEditingAttachments().length + pendingFiles.length >= MAX_ATTACHMENTS) {
+      showToast(`❌ แนบไฟล์ได้สูงสุด ${MAX_ATTACHMENTS} ไฟล์ต่อประกาศ`);
+      break;
+    }
+    pendingFiles.push(file);
+  }
+
+  if (pendingFiles.length > 0) document.getElementById('hasAttachment').checked = true;
+  renderAttachmentPicker();
+}
+
+function removePendingFile(index) {
+  pendingFiles.splice(index, 1);
+  renderAttachmentPicker();
+}
+
+async function removeExistingAttachment(attachmentId) {
+  if (!editingPostId || !confirm('ต้องการลบไฟล์แนบนี้ใช่หรือไม่?')) return;
+  try {
+    const updated = await requestApi(`/api/announcements/${editingPostId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    });
+    applyAnnouncement(updated);
+    renderAttachmentPicker();
+    showToast('🗑️ ลบไฟล์แนบแล้ว');
+  } catch (error) {
+    console.error(error);
+    showToast(error.message);
+  }
+}
+
+async function uploadAttachment(announcementId, file) {
+  const response = await fetch(`/api/announcements/${announcementId}/attachments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'X-File-Name': encodeURIComponent(file.name),
+      'X-CSRF-Token': csrfToken,
+    },
+    body: file,
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || `อัปโหลด ${file.name} ไม่สำเร็จ (${response.status})`);
+  return result;
+}
+
+function renderAttachmentsHtml(post, titleHtml = '📎 ไฟล์แนบ') {
+  const files = post.attachments ?? [];
+  if (files.length === 0) return '';
+
+  const images = files.filter((f) => f.mimeType.startsWith('image/'));
+  const others = files.filter((f) => !f.mimeType.startsWith('image/'));
+
+  const gallery = images.length
+    ? `<div class="attach-gallery">${images
+        .map(
+          (f) =>
+            `<a href="${f.url}" target="_blank" rel="noopener" title="${escapeHtml(f.name)}"><img src="${f.url}" alt="${escapeHtml(f.name)}" loading="lazy"></a>`
+        )
+        .join('')}</div>`
+    : '';
+
+  const docs = others.length
+    ? `<ul class="attach-files">${others
+        .map((f) => {
+          const inline = f.mimeType === 'application/pdf';
+          const href = inline ? f.url : `${f.url}?download=1`;
+          return `<li><a href="${href}" ${inline ? 'target="_blank" rel="noopener"' : ''}>${fileIcon(f.name, f.mimeType)} <span style="flex:1">${escapeHtml(f.name)}</span> <small style="color:#64748b">${formatFileSize(f.size)}</small></a></li>`;
+        })
+        .join('')}</ul>`
+    : '';
+
+  return `<h5 class="attach-section-title">${titleHtml} (${files.length})</h5>${gallery}${docs}`;
+}
+
 // Teacher Management: Create / Edit / Delete / Pin
 function openAdminModal() {
   editingPostId = null;
@@ -839,6 +993,8 @@ function openAdminModal() {
   document.getElementById('postSeatsMax').value = '50';
   document.getElementById('postEventDate').value = '';
   handleCategoryChange();
+  pendingFiles = [];
+  renderAttachmentPicker();
 
   if (!quill) quill = new Quill('#editor', { theme: 'snow' });
   quill.root.innerHTML = '';
@@ -861,6 +1017,8 @@ function openEditModal(id) {
   document.getElementById('postSeatsMax').value = post.seatsMax ?? 50;
   document.getElementById('postEventDate').value = post.eventDate ?? '';
   handleCategoryChange();
+  pendingFiles = [];
+  renderAttachmentPicker();
 
   if (!quill) quill = new Quill('#editor', { theme: 'snow' });
   quill.root.innerHTML = post.content || '';
@@ -890,31 +1048,57 @@ async function submitAnnouncement() {
     category: cat,
     target: document.getElementById('postTarget').value,
     pinned: document.getElementById('isPinned').checked,
-    hasPdf: document.getElementById('hasAttachment').checked,
+    hasPdf:
+      document.getElementById('hasAttachment').checked ||
+      pendingFiles.length > 0 ||
+      currentEditingAttachments().length > 0,
     seatsMax: cat === 'activity' ? Number(document.getElementById('postSeatsMax').value) || 50 : null,
     eventDate: document.getElementById('postEventDate').value.trim() || null,
   };
 
+  const submitButton = document.getElementById('btnSubmitPost');
+  submitButton.disabled = true;
+
   try {
+    let saved;
     if (editingPostId) {
-      const updated = await requestApi(`/api/announcements/${editingPostId}`, {
+      saved = await requestApi(`/api/announcements/${editingPostId}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       });
-      applyAnnouncement(updated);
-      showToast('✅ แก้ไขประกาศเรียบร้อยแล้ว');
+      applyAnnouncement(saved);
     } else {
-      const created = await requestApi('/api/announcements', {
+      saved = await requestApi('/api/announcements', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      applyAnnouncement(created);
-      showToast('✅ เผยแพร่ประกาศใหม่เรียบร้อยแล้ว');
+      applyAnnouncement(saved);
+      editingPostId = saved.id; // so a failed upload can be retried via edit
     }
+
+    // Upload the selected files one by one
+    const total = pendingFiles.length;
+    for (let i = 0; i < total; i += 1) {
+      submitButton.innerText = `กำลังอัปโหลดไฟล์ ${i + 1}/${total}...`;
+      const updated = await uploadAttachment(saved.id, pendingFiles[0]);
+      pendingFiles.shift();
+      saved = applyAnnouncement(updated);
+    }
+
+    showToast(
+      total > 0
+        ? `✅ บันทึกประกาศและอัปโหลดไฟล์ ${total} ไฟล์เรียบร้อยแล้ว`
+        : '✅ บันทึกประกาศเรียบร้อยแล้ว'
+    );
+    pendingFiles = [];
     closeModal('adminModal');
   } catch (error) {
     console.error(error);
-    showToast(error.message);
+    renderAttachmentPicker();
+    showToast(`${error.message} (ประกาศถูกบันทึกแล้ว สามารถกดแก้ไขเพื่อแนบไฟล์ที่เหลือได้)`);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.innerText = editingPostId ? 'บันทึกการแก้ไข' : 'เผยแพร่ประกาศ';
   }
 }
 
@@ -1087,6 +1271,16 @@ function toggleViewBookmarks() {
   renderCards();
 }
 
+function toggleViewMyEvents() {
+  showMyEventsOnly = !showMyEventsOnly;
+  document.getElementById('btn-my-events').classList.toggle('active', showMyEventsOnly);
+  renderCards();
+  if (showMyEventsOnly) {
+    const count = announcements.filter((a) => a.registered && a.category === 'activity').length;
+    showToast(count > 0 ? `🎟️ กิจกรรมที่คุณลงทะเบียนไว้ ${count} รายการ` : '🎟️ คุณยังไม่ได้ลงทะเบียนกิจกรรมใด ๆ');
+  }
+}
+
 function toggleBookmark(id) {
   const item = announcements.find((a) => a.id === id);
   if (item) {
@@ -1148,12 +1342,16 @@ window.printTicket = printTicket;
 window.closeModal = closeModal;
 window.toggleDarkMode = toggleDarkMode;
 window.toggleViewBookmarks = toggleViewBookmarks;
+window.toggleViewMyEvents = toggleViewMyEvents;
 window.toggleBookmark = toggleBookmark;
 window.shareAnnouncement = shareAnnouncement;
 window.handleSearch = handleSearch;
 window.handleSort = handleSort;
 window.handleCategoryChange = handleCategoryChange;
 window.submitAnnouncement = submitAnnouncement;
+window.handleFileSelect = handleFileSelect;
+window.removePendingFile = removePendingFile;
+window.removeExistingAttachment = removeExistingAttachment;
 
 // Initialize
 initializeApplication().catch((error) => {
